@@ -130,7 +130,7 @@ def main():
     tool = CosmicEncryptor()
     while True:
         print("\n" + "="*35)
-        print("     COSMIC SHIELD v2.0")
+        print("     ASTRAL ENCRYPT0R v2.0")
         print("="*35)
         print("1. Generate New Identity (Keys)")
         print("2. Encrypt a File")
