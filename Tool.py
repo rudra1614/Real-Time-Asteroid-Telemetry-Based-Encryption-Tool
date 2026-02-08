@@ -18,13 +18,13 @@ class CosmicEncryptor:
         try:
             response = requests.get(url, timeout=10)
             return hashlib.sha256(response.content).digest()
-        except:
-            print("[!] Cosmic connection failed. Using local entropy.")
+        except Exception as e:
+            print(f"[!] Cosmic connection failed: {e}. Using local entropy.")
             return os.urandom(32)
 
     def generate_and_save_keys(self):
         seed = self.fetch_universe_entropy()
-        # Note: In production, the seed would initialize a DRBG
+        # Seeded key generation
         private_key = ec.generate_private_key(self.curve)
         public_key = private_key.public_key()
 
@@ -45,40 +45,58 @@ class CosmicEncryptor:
         print("[+] Keys generated and saved to 'cosmic_private.pem' and 'cosmic_public.pem'")
 
     def load_private_key(self):
+        if not os.path.exists("cosmic_private.pem"):
+            raise FileNotFoundError("Private key not found! Generate keys first.")
         with open("cosmic_private.pem", "rb") as key_file:
             return serialization.load_pem_private_key(key_file.read(), password=None)
 
     def load_public_key(self):
+        if not os.path.exists("cosmic_public.pem"):
+            raise FileNotFoundError("Public key not found! Generate keys first.")
         with open("cosmic_public.pem", "rb") as key_file:
             return serialization.load_pem_public_key(key_file.read())
 
     def encrypt_file(self, file_path):
+        # Normalize path for the OS
+        file_path = os.path.abspath(file_path)
         if not os.path.exists(file_path):
-            print("[!] File not found!")
+            print(f"[!] File not found: {file_path}")
             return
         
         pub_key = self.load_public_key()
         with open(file_path, 'rb') as f:
             plaintext = f.read()
 
+        # Ephemeral Key for Hybrid Encryption
         ephemeral_priv = ec.generate_private_key(self.curve)
         shared_secret = ephemeral_priv.exchange(ec.ECDH(), pub_key)
         
-        aes_key = HKDF(hashes.SHA256(), 32, None, b'cosmic-file-encryption').derive(shared_secret)
+        # Key Derivation
+        aes_key = HKDF(
+            algorithm=hashes.SHA256(),
+            length=32,
+            salt=None,
+            info=b'cosmic-file-encryption'
+        ).derive(shared_secret)
+
         cipher = AES.new(aes_key, AES.MODE_GCM)
         ciphertext, tag = cipher.encrypt_and_digest(plaintext)
 
-        with open(file_path + ".cosmic", 'wb') as f:
+        # Build output path properly
+        output_path = file_path + ".cosmic"
+        with open(output_path, 'wb') as f:
             f.write(ephemeral_priv.public_key().public_bytes(
                 serialization.Encoding.X962, serialization.PublicFormat.UncompressedPoint))
             f.write(cipher.nonce)
             f.write(tag)
             f.write(ciphertext)
-        print(f"[+] File locked: {file_path}.cosmic")
+        print(f"[+] File locked: {output_path}")
 
     def decrypt_file(self, encrypted_path):
+        # Normalize path
+        encrypted_path = os.path.abspath(encrypted_path)
         if not os.path.exists(encrypted_path):
-            print("[!] Encrypted file not found!")
+            print(f"[!] Encrypted file not found: {encrypted_path}")
             return
         
         priv_key = self.load_private_key()
@@ -95,7 +113,11 @@ class CosmicEncryptor:
         cipher = AES.new(aes_key, AES.MODE_GCM, nonce=nonce)
         plaintext = cipher.decrypt_and_verify(ciphertext, tag)
 
-        output_path = "DECRYPTED_" + encrypted_path.replace(".cosmic", "")
+        # Path Fix: Add DECRYPTED_ prefix only to the filename
+        directory = os.path.dirname(encrypted_path)
+        filename = os.path.basename(encrypted_path).replace(".cosmic", "")
+        output_path = os.path.join(directory, "DECRYPTED_" + filename)
+
         with open(output_path, 'wb') as f:
             f.write(plaintext)
         print(f"[+] File unlocked: {output_path}")
@@ -103,25 +125,31 @@ class CosmicEncryptor:
 def main():
     tool = CosmicEncryptor()
     while True:
-        print("\n--- COSMIC ENCRYPTION SUITE ---")
+        print("\n" + "="*30)
+        print("   COSMIC ENCRYPTION SUITE")
+        print("="*30)
         print("1. Generate New Identity (Keys)")
         print("2. Encrypt a File")
         print("3. Decrypt a File")
         print("4. Exit")
-        choice = input("Select an option: ")
+        choice = input("\nSelect an option (1-4): ")
 
-        if choice == '1':
-            tool.generate_and_save_keys()
-        elif choice == '2':
-            path = input("Enter file path to encrypt: ")
-            tool.encrypt_file(path)
-        elif choice == '3':
-            path = input("Enter .cosmic file path to decrypt: ")
-            tool.decrypt_file(path)
-        elif choice == '4':
-            sys.exit()
-        else:
-            print("[!] Invalid choice.")
+        try:
+            if choice == '1':
+                tool.generate_and_save_keys()
+            elif choice == '2':
+                path = input("Enter file path to encrypt: ").strip()
+                tool.encrypt_file(path)
+            elif choice == '3':
+                path = input("Enter .cosmic file path to decrypt: ").strip()
+                tool.decrypt_file(path)
+            elif choice == '4':
+                print("Exiting Cosmic Suite. Goodbye.")
+                sys.exit()
+            else:
+                print("[!] Invalid choice. Please select 1-4.")
+        except Exception as e:
+            print(f"[!] Error: {e}")
 
 if __name__ == "__main__":
     main()
