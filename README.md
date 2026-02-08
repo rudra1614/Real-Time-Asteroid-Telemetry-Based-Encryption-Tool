@@ -1,7 +1,7 @@
-🌌 Cosmic-Shield v2.0
+🌌 Astral-Encrypt0r v2.0
 Entropy-Driven Hybrid Encryption Suite
 
-Cosmic-Shield is a high-integrity security tool that derives cryptographic "Roots of Trust" from the unpredictable state of the universe. By harvesting real-time telemetry of Near-Earth Objects (asteroids) from NASA's APIs, the tool ensures that encryption keys are born from true physical entropy.
+Astral-Encrypt0r is a high-integrity security tool that derives cryptographic "Roots of Trust" from the unpredictable state of the universe. By harvesting real-time telemetry of Near-Earth Objects (asteroids) from NASA's APIs, the tool ensures that encryption keys are born from true physical entropy.
 🚀 Key Features
 
     Cosmic Entropy Harvesting: Uses real-time asteroid velocity and orbital data from NASA's NeoWs API to seed keys.
