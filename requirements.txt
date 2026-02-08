@@ -1,0 +1,20 @@
+# --- Networking & API ---
+# Essential for fetching real-time asteroid/space data from NASA
+requests==2.31.0
+
+# --- Core Cryptography ---
+# Handles Asymmetric ECC (Elliptic Curve) and Key Exchange (ECDH)
+cryptography==42.0.5
+
+# Handles Symmetric AES-GCM for fast file encryption
+# Note: This is imported as 'Crypto' in your code
+pycryptodome==3.20.0
+
+# --- User Interface (Optional but recommended) ---
+# For building that cool web-based dashboard for your project
+streamlit==1.31.0
+
+# --- Security Utilities ---
+# Ensures your environment is secure (often required by cryptography lib)
+cffi==1.16.0
+certifi==2024.2.2
