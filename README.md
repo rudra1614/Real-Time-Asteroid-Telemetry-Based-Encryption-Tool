@@ -52,18 +52,24 @@ Bash
 
 python Tool.py
 
-    Generate Identity: Create a named key pair (e.g., placement_key).
+Generate Identity: Create a named key pair (e.g., placement_key).
 
-    <img width="911" height="381" alt="image" src="https://github.com/user-attachments/assets/4ac8ea56-d412-45c2-898c-a3953d3d353b" />
-
-
-    Encrypt: Provide a file path and the identity name. The tool generates a .cosmic file.
-
-    <img width="531" height="306" alt="image" src="https://github.com/user-attachments/assets/bd3d7bbe-7594-4866-bf17-4aa4b9f1bfa8" /> <img width="152" height="98" alt="image" src="https://github.com/user-attachments/assets/9a9b940a-e9f5-4f3e-a09d-7ff7798440ad" />
+<img width="712" height="337" alt="image" src="https://github.com/user-attachments/assets/72ac12ca-dd8a-4a20-99fb-11b4155d1f69" />
 
 
+Encrypt: Provide a file path and the identity name. The tool generates a .cosmic file.
 
-    Decrypt: Provide the .cosmic file path and your identity name to recover the original file.
+<img width="530" height="318" alt="image" src="https://github.com/user-attachments/assets/b3318fbc-f13b-487f-9ae7-beccd6f8c024" />
 
-    <img width="593" height="313" alt="image" src="https://github.com/user-attachments/assets/841c33de-2e6c-4e15-b421-f9a83daa0c26" />
+
+<img width="152" height="98" alt="image" src="https://github.com/user-attachments/assets/e1904c32-346b-409c-a9fa-8d2ddd7428fd" />
+
+
+
+Decrypt: Provide the .cosmic file path and your identity name to recover the original file.
+
+<img width="868" height="300" alt="image" src="https://github.com/user-attachments/assets/f85c2766-7be0-48e6-a6d2-88a06d422947" />
+    
+<img width="108" height="118" alt="image" src="https://github.com/user-attachments/assets/3406409f-f10c-4617-86ca-4ca87ae7ea4a" />
+
 
