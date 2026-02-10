@@ -1,13 +1,14 @@
 🚀 Astral-Encrypt0r: Hybrid Entropy Encryption Suite
 
 Astral-Encrypt0r is a high-integrity cryptographic tool that bridges astronomical physics with modern cybersecurity. It leverages real-time asteroid telemetry from NASA’s NeoWs API as a non-deterministic entropy source to seed industry-standard hybrid encryption (ECC + AES-GCM).
+
 🌟 Key Features
 
     Celestial Entropy Harvesting: Uses live NASA orbital data (velocity, miss-distance, and orbit determination timestamps) to initialize cryptographic seeds.
 
     Hybrid Asymmetric Architecture: * Identity: Elliptic Curve Cryptography (SECP256R1) for robust, efficient key management.
 
-        Encryption: AES-256-GCM for high-speed file encryption with built-in integrity verification (Authenticated Encryption).
+    Encryption: AES-256-GCM for high-speed file encryption with built-in integrity verification (Authenticated Encryption).
 
     Defense-in-Depth Entropy: Implements a Hybrid Seed Model that mixes public NASA telemetry with local high-precision system noise (time_ns) and OS-level entropy (os.urandom).
 
@@ -26,39 +27,38 @@ Astral-Encrypt0r is a high-integrity cryptographic tool that bridges astronomica
     Security Standards: NIST-compliant curves and authenticated encryption modes.
 
 🚀 Getting Started
-1. Prerequisites
+1. Prerequisites and Installation
 
 Ensure you have Python installed and the necessary cryptographic libraries:
 Bash
 
-pip install cryptography requests
+    1. pip install cryptography requests
 
-2. Installation
-Bash
+    2. git clone https://github.com/your-username/Astral-Encrypt0r.git
+    
+    3. cd Astral-Encrypt0r
 
-git clone https://github.com/your-username/Astral-Encrypt0r.git
-cd Astral-Encrypt0r
+    4. python3 -m venv venv
 
-3. Usage
+    5. source venv/bin/activate
+
+    6. pip install -r requirements.txt
+
+2. 🖥 How to Use
 
 Run the interactive suite:
 Bash
 
-python Tool.py
+    python3 Tool.py
 
+Workflow:
+    
     Create Identity: Generates your celestial-seeded key pair.
-
+    
     Encrypt File: Locks any file using your ECC identity and NASA entropy.
 
     Decrypt File: Unlocks your .cosmic files and verifies they haven't been tampered with.
 
-
-🖥 How to Use
-
-Run the suite using:
-Bash
-
-python Tool.py
 
 Generate Identity: Create a named key pair (e.g., placement_key).
 
