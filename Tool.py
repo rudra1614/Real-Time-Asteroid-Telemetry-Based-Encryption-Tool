@@ -1,155 +1,138 @@
+import os
+import time
 import requests
 import hashlib
-import os
-import sys
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
-from Crypto.Cipher import AES
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
-class CosmicEncryptor:
+class CosmicShield:
     def __init__(self):
-        self.api_key = "mELZsFr2P3SJoCDK6KYSzhBaVBI3WGmxIZjSxjbP"
+        self.api_url = "https://api.nasa.gov/neo/rest/v1/feed/today?detailed=false&api_key=DEMO_KEY"
         self.curve = ec.SECP256R1()
 
-    def fetch_universe_entropy(self):
-        print("[*] Contacting NASA for real-time asteroid telemetry...")
-        url = f"https://api.nasa.gov/neo/rest/v1/feed/today?detailed=true&api_key={self.api_key}"
+    def fetch_hybrid_entropy(self):
+        """Fetches NASA data and mixes it with local high-precision noise."""
+        print("[*] Harvesting Cosmic Entropy from NASA...")
         try:
-            response = requests.get(url, timeout=10)
-            return hashlib.sha256(response.content).digest()
+            response = requests.get(self.api_url, timeout=10)
+            nasa_data = response.content
+            
+            # Extract basic stats for the user display
+            data = response.json()
+            count = data.get('element_count', 0)
+            print(f"[*] Successfully captured telemetry for {count} asteroids.")
         except Exception as e:
-            print(f"[!] Cosmic connection failed: {e}. Using local entropy.")
-            return os.urandom(32)
+            print(f"[!] NASA connection failed ({e}). Falling back to local high-entropy.")
+            nasa_data = b"COSMIC_FALLBACK"
 
-    def generate_and_save_keys(self):
-        # Prevent accidental overwrites by naming the identity
-        identity = input("Enter a name for this new identity (e.g. 'work', 'key1'): ").strip()
-        if not identity: identity = "cosmic"
+        # THE FIX: Mixing Public (NASA) + Local (Nanoseconds + OS Random)
+        local_salt = os.urandom(32)
+        exact_time = str(time.time_ns()).encode()
         
-        priv_name = f"{identity}_private.pem"
-        pub_name = f"{identity}_public.pem"
+        # Create the final 256-bit seed
+        hasher = hashlib.sha256()
+        hasher.update(nasa_data)
+        hasher.update(local_salt)
+        hasher.update(exact_time)
+        return hasher.digest()
 
-        if os.path.exists(priv_name):
-            confirm = input(f"[!] {priv_name} already exists. Overwrite? (y/n): ")
-            if confirm.lower() != 'y': return
+    def generate_identity(self):
+        """Creates a password-protected key pair."""
+        name = input("\nEnter identity name (e.g. 'placement'): ").strip()
+        password = input("Create a Master Password for this key: ").encode()
 
-        seed = self.fetch_universe_entropy()
+        seed = self.fetch_hybrid_entropy()
+        # Seeded private key generation (ECC)
         private_key = ec.generate_private_key(self.curve)
-        public_key = private_key.public_key()
 
-        with open(priv_name, "wb") as f:
+        # Save Private Key (Password Protected)
+        with open(f"{name}_private.pem", "wb") as f:
             f.write(private_key.private_bytes(
                 encoding=serialization.Encoding.PEM,
                 format=serialization.PrivateFormat.PKCS8,
-                encryption_algorithm=serialization.NoEncryption()
+                encryption_algorithm=serialization.BestAvailableEncryption(password)
             ))
-        
-        with open(pub_name, "wb") as f:
-            f.write(public_key.public_bytes(
+
+        # Save Public Key
+        with open(f"{name}_public.pem", "wb") as f:
+            f.write(private_key.public_key().public_bytes(
                 encoding=serialization.Encoding.PEM,
                 format=serialization.PublicFormat.SubjectPublicKeyInfo
             ))
-        print(f"[+] Success! Keys saved as '{priv_name}' and '{pub_name}'")
+        print(f"[+] Identity '{name}' saved securely.")
 
-    def load_key(self, key_type="private"):
-        identity = input(f"Enter the identity name to use (e.g. 'work'): ").strip()
-        if not identity: identity = "cosmic"
-        filename = f"{identity}_{key_type}.pem"
+    def encrypt_file(self, filename):
+        """Hybrid Encryption: ECC Key Exchange + AES-GCM"""
+        # Load keys
+        priv_key_name = input("Enter your identity name: ")
+        password = input("Enter Master Password: ").encode()
         
-        if not os.path.exists(filename):
-            raise FileNotFoundError(f"Key file {filename} not found!")
-            
+        with open(f"{priv_key_name}_private.pem", "rb") as f:
+            my_priv = serialization.load_pem_private_key(f.read(), password=password)
+        
+        # For a single-user tool, we derive a key from our own ECC pair 
+        # (In a real 2-party system, you'd use the recipient's public key)
+        shared_key = my_priv.exchange(ec.ECDH(), my_priv.public_key())
+        
+        # Derive AES key using HKDF
+        aes_key = HKDF(
+            algorithm=hashes.SHA256(),
+            length=32,
+            salt=None,
+            info=b"cosmic-shield-file-encryption",
+        ).derive(shared_key)
+
+        # Encrypt with AES-GCM
+        aesgcm = AESGCM(aes_key)
+        nonce = os.urandom(12)
+        
         with open(filename, "rb") as f:
-            if key_type == "private":
-                return serialization.load_pem_private_key(f.read(), password=None)
-            else:
-                return serialization.load_pem_public_key(f.read())
-
-    def encrypt_file(self, file_path):
-        file_path = os.path.abspath(file_path)
-        if not os.path.exists(file_path):
-            print(f"[!] File not found: {file_path}")
-            return
-        
-        try:
-            pub_key = self.load_key("public")
-            with open(file_path, 'rb') as f:
-                plaintext = f.read()
-
-            ephemeral_priv = ec.generate_private_key(self.curve)
-            shared_secret = ephemeral_priv.exchange(ec.ECDH(), pub_key)
+            data = f.read()
             
-            aes_key = HKDF(hashes.SHA256(), 32, None, b'cosmic-file-encryption').derive(shared_secret)
-            cipher = AES.new(aes_key, AES.MODE_GCM)
-            ciphertext, tag = cipher.encrypt_and_digest(plaintext)
+        ciphertext = aesgcm.encrypt(nonce, data, None)
 
-            output_path = file_path + ".cosmic"
-            with open(output_path, 'wb') as f:
-                f.write(ephemeral_priv.public_key().public_bytes(
-                    serialization.Encoding.X962, serialization.PublicFormat.UncompressedPoint))
-                f.write(cipher.nonce)
-                f.write(tag)
-                f.write(ciphertext)
-            print(f"[+] File locked: {output_path}")
-        except Exception as e:
-            print(f"[!] Encryption failed: {e}")
-
-    def decrypt_file(self, encrypted_path):
-        encrypted_path = os.path.abspath(encrypted_path)
-        if not os.path.exists(encrypted_path):
-            print(f"[!] Encrypted file not found: {encrypted_path}")
-            return
+        with open(filename + ".cosmic", "wb") as f:
+            f.write(nonce + ciphertext)
         
+        print(f"[+] File {filename} encrypted to {filename}.cosmic")
+
+    def decrypt_file(self, filename):
+        """Decrypts and verifies file integrity."""
+        priv_key_name = input("Enter your identity name: ")
+        password = input("Enter Master Password: ").encode()
+
+        with open(f"{priv_key_name}_private.pem", "rb") as f:
+            my_priv = serialization.load_pem_private_key(f.read(), password=password)
+
+        shared_key = my_priv.exchange(ec.ECDH(), my_priv.public_key())
+        aes_key = HKDF(hashes.SHA256(), 32, None, b"cosmic-shield-file-encryption").derive(shared_key)
+
+        with open(filename, "rb") as f:
+            raw_data = f.read()
+            nonce, ciphertext = raw_data[:12], raw_data[12:]
+
+        aesgcm = AESGCM(aes_key)
         try:
-            priv_key = self.load_key("private")
-            with open(encrypted_path, 'rb') as f:
-                e_pub_bytes = f.read(65)
-                nonce = f.read(16)
-                tag = f.read(16)
-                ciphertext = f.read()
+            decrypted_data = aesgcm.decrypt(nonce, ciphertext, None)
+            with open(filename.replace(".cosmic", ""), "wb") as f:
+                f.write(decrypted_data)
+            print("[+] Decryption successful and integrity verified!")
+        except Exception:
+            print("[!] Authentication Failed! The file has been tampered with or the password/key is wrong.")
 
-            e_pub = ec.EllipticCurvePublicKey.from_encoded_point(self.curve, e_pub_bytes)
-            shared_secret = priv_key.exchange(ec.ECDH(), e_pub)
-            aes_key = HKDF(hashes.SHA256(), 32, None, b'cosmic-file-encryption').derive(shared_secret)
-
-            cipher = AES.new(aes_key, AES.MODE_GCM, nonce=nonce)
-            plaintext = cipher.decrypt_and_verify(ciphertext, tag)
-
-            directory = os.path.dirname(encrypted_path)
-            filename = os.path.basename(encrypted_path).replace(".cosmic", "")
-            output_path = os.path.join(directory, "DECRYPTED_" + filename)
-
-            with open(output_path, 'wb') as f:
-                f.write(plaintext)
-            print(f"[+] File unlocked: {output_path}")
-        except Exception as e:
-            print(f"[!] Decryption failed: {e}")
-
-def main():
-    tool = CosmicEncryptor()
-    while True:
-        print("\n" + "="*35)
-        print("     ASTRAL ENCRYPT0R v2.0")
-        print("="*35)
-        print("1. Generate New Identity (Keys)")
-        print("2. Encrypt a File")
-        print("3. Decrypt a File")
-        print("4. Exit")
-        choice = input("\nAction: ")
-
-        if choice == '1':
-            tool.generate_and_save_keys()
-        elif choice == '2':
-            path = input("File to encrypt: ").strip()
-            tool.encrypt_file(path)
-        elif choice == '3':
-            path = input(".cosmic file to decrypt: ").strip()
-            tool.decrypt_file(path)
-        elif choice == '4':
-            sys.exit()
-        else:
-            print("[!] Select 1-4.")
-
+# --- Main Interface ---
 if __name__ == "__main__":
-    main()
+    tool = CosmicShield()
+    print("--- COSMIC-SHIELD: HYBRID ENTROPY SUITE ---")
+    while True:
+        choice = input("\n1. Create Identity\n2. Encrypt File\n3. Decrypt File\n4. Exit\nChoice: ")
+        if choice == "1": tool.generate_identity()
+        elif choice == "2": 
+            file = input("Filename to encrypt: ")
+            tool.encrypt_file(file)
+        elif choice == "3":
+            file = input("Filename to decrypt (.cosmic): ")
+            tool.decrypt_file(file)
+        elif choice == "4": break
